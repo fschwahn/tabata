@@ -308,6 +308,20 @@ button.ghost:focus-visible {
     padding: 16px 14px 24px;
   }
 
+  .layout {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .panel.timer {
+    order: -1;
+  }
+
+  .panel {
+    padding: 20px;
+  }
+
   .setting {
     min-height: 100px;
   }
