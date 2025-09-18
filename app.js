@@ -17,6 +17,12 @@ const ranges = {
   setRest: { min: 0, max: 600, step: 5 },
 };
 
+const PREF_KEY = 'tabata-preferences-v1';
+const preferenceDefaults = {
+  soundEnabled: true,
+};
+
+let preferences = loadPreferences();
 let settings = loadSettings();
 
 const state = {
@@ -26,10 +32,13 @@ const state = {
   running: false,
   rafId: null,
   targetTs: null,
-  soundEnabled: true,
+  soundEnabled: preferences.soundEnabled,
   audioCtx: null,
   skipCue: false,
+  wakeLockSentinel: null,
 };
+
+let wakeLockWarningShown = false;
 
 const elements = {
   settings: document.querySelectorAll('.setting'),
@@ -72,6 +81,22 @@ function loadSettings() {
 
 function saveSettings() {
   localStorage.setItem(STORE_KEY, JSON.stringify(settings));
+}
+
+function loadPreferences() {
+  try {
+    const stored = localStorage.getItem(PREF_KEY);
+    if (!stored) return { ...preferenceDefaults };
+    const parsed = JSON.parse(stored);
+    return normalizePreferences({ ...preferenceDefaults, ...parsed });
+  } catch (err) {
+    console.warn('Failed to load preferences', err);
+    return { ...preferenceDefaults };
+  }
+}
+
+function savePreferences() {
+  localStorage.setItem(PREF_KEY, JSON.stringify(preferences));
 }
 
 function applySettingsToUI() {
@@ -132,6 +157,8 @@ function bindEvents() {
   elements.soundBtn.addEventListener('click', () => {
     state.soundEnabled = !state.soundEnabled;
     updateSoundButton();
+    preferences.soundEnabled = state.soundEnabled;
+    savePreferences();
     if (state.soundEnabled) {
       ensureAudioContext();
       resumeAudioContext();
@@ -175,6 +202,12 @@ function normalizeSettings(cfg) {
   return normalized;
 }
 
+function normalizePreferences(data) {
+  return {
+    soundEnabled: Boolean(data.soundEnabled),
+  };
+}
+
 function updateSummary() {
   const totalSeconds = state.segments.reduce((acc, seg) => acc + seg.duration, 0);
   elements.totalTime.textContent = formatDuration(totalSeconds);
@@ -187,6 +220,7 @@ function resetTimer() {
   state.current = 0;
   state.remaining = state.segments[0]?.duration || 0;
   state.skipCue = false;
+  disableWakeLock();
   elements.startBtn.textContent = 'Start';
   updateTimerDisplay();
 }
@@ -203,6 +237,7 @@ function startTimer() {
   }
   state.skipCue = false;
   resumeAudioContext();
+  enableWakeLock();
   elements.startBtn.textContent = 'Pause';
   tick(performance.now());
 }
@@ -211,12 +246,14 @@ function pauseTimer() {
   state.running = false;
   cancelTick();
   state.skipCue = true;
+  disableWakeLock();
   elements.startBtn.textContent = 'Resume';
 }
 
 function finishTimer() {
   cancelTick();
   state.running = false;
+  disableWakeLock();
   elements.startBtn.textContent = 'Restart';
   updateTimerDisplay();
   playCue('complete');
@@ -352,6 +389,8 @@ function ensureAudioContext() {
   } catch (err) {
     console.warn('AudioContext unavailable', err);
     state.soundEnabled = false;
+    preferences.soundEnabled = state.soundEnabled;
+    savePreferences();
     updateSoundButton();
   }
 }
@@ -369,6 +408,51 @@ function updateSoundButton() {
   if (!elements.soundBtn) return;
   elements.soundBtn.setAttribute('aria-pressed', state.soundEnabled);
   elements.soundBtn.textContent = state.soundEnabled ? 'Sound is on' : 'Sound is off';
+}
+
+async function enableWakeLock() {
+  if (state.wakeLockSentinel) return;
+  const wakeLockApiAvailable = 'wakeLock' in navigator && navigator.wakeLock && typeof navigator.wakeLock.request === 'function';
+  if (!wakeLockApiAvailable) {
+    notifyWakeLockUnsupported();
+    return;
+  }
+
+  try {
+    const sentinel = await navigator.wakeLock.request('screen');
+    state.wakeLockSentinel = sentinel;
+    sentinel.addEventListener('release', handleWakeLockRelease);
+  } catch (err) {
+    console.warn('Wake lock request failed', err);
+    notifyWakeLockUnsupported();
+  }
+}
+
+function disableWakeLock() {
+  if (!state.wakeLockSentinel) return;
+  const sentinel = state.wakeLockSentinel;
+  state.wakeLockSentinel = null;
+  try {
+    sentinel.removeEventListener('release', handleWakeLockRelease);
+  } catch (err) {
+    console.warn('Failed to remove wake lock listener', err);
+  }
+  sentinel.release().catch((err) => {
+    console.warn('Wake lock release failed', err);
+  });
+}
+
+function handleWakeLockRelease() {
+  state.wakeLockSentinel = null;
+  if (state.running && !document.hidden) {
+    enableWakeLock();
+  }
+}
+
+function notifyWakeLockUnsupported() {
+  if (wakeLockWarningShown) return;
+  wakeLockWarningShown = true;
+  window.alert('Screen wake lock is not supported or allowed on this device. The screen may still turn off while the timer runs.');
 }
 
 function flashPanel() {
@@ -406,7 +490,17 @@ function setupInstallPrompt() {
 
 // expose reset on visibility change to avoid drift
 window.addEventListener('visibilitychange', () => {
-  if (document.hidden) return;
+  if (document.hidden) {
+    if (state.wakeLockSentinel) {
+      disableWakeLock();
+    }
+    return;
+  }
+
+  if (state.running) {
+    enableWakeLock();
+  }
+
   if (state.running && state.targetTs) {
     // adjust remaining on resume
     const now = performance.now();
