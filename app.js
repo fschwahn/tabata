@@ -26,7 +26,7 @@ const state = {
   running: false,
   rafId: null,
   targetTs: null,
-  soundEnabled: false,
+  soundEnabled: true,
   audioCtx: null,
   skipCue: false,
 };
@@ -53,6 +53,7 @@ function init() {
   applySettingsToUI();
   updateSummary();
   resetTimer();
+  updateSoundButton();
   bindEvents();
   registerServiceWorker();
 }
@@ -130,10 +131,10 @@ function bindEvents() {
 
   elements.soundBtn.addEventListener('click', () => {
     state.soundEnabled = !state.soundEnabled;
-    elements.soundBtn.setAttribute('aria-pressed', state.soundEnabled);
-    elements.soundBtn.textContent = state.soundEnabled ? 'Sound Off' : 'Sound On';
+    updateSoundButton();
     if (state.soundEnabled) {
       ensureAudioContext();
+      resumeAudioContext();
     } else if (state.audioCtx) {
       state.audioCtx.close();
       state.audioCtx = null;
@@ -188,6 +189,7 @@ function startTimer() {
     state.targetTs = performance.now() + state.remaining * 1000;
   }
   state.skipCue = false;
+  resumeAudioContext();
   elements.startBtn.textContent = 'Pause';
   tick(performance.now());
 }
@@ -298,6 +300,7 @@ function playCue(type) {
   if (!state.soundEnabled) return;
   ensureAudioContext();
   if (!state.audioCtx) return;
+  resumeAudioContext();
   const duration = type === 'complete' ? 0.6 : 0.18;
   const freq = cueFrequency(type);
   const now = state.audioCtx.currentTime;
@@ -336,9 +339,23 @@ function ensureAudioContext() {
   } catch (err) {
     console.warn('AudioContext unavailable', err);
     state.soundEnabled = false;
-    elements.soundBtn.setAttribute('aria-pressed', 'false');
-    elements.soundBtn.textContent = 'Sound On';
+    updateSoundButton();
   }
+}
+
+function resumeAudioContext() {
+  if (!state.audioCtx) return;
+  if (state.audioCtx.state === 'suspended') {
+    state.audioCtx.resume().catch((err) => {
+      console.warn('Failed to resume audio context', err);
+    });
+  }
+}
+
+function updateSoundButton() {
+  if (!elements.soundBtn) return;
+  elements.soundBtn.setAttribute('aria-pressed', state.soundEnabled);
+  elements.soundBtn.textContent = state.soundEnabled ? 'Sound Off' : 'Sound On';
 }
 
 function flashPanel() {
