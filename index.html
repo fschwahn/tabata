@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111216" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="An offline-first Tabata timer with a focused, high-contrast design." />
+  <title>Tabata Timer</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="top-bar">
+      <div class="brand">
+        <span class="brand-mark">Tabata</span>
+        <span class="brand-sub">Timer</span>
+      </div>
+      <button class="install-btn ghost" id="installBtn" hidden>Install App</button>
+    </header>
+
+    <main class="layout">
+      <section class="panel controls">
+        <h2 class="panel-title">Workout Setup</h2>
+        <div class="setting-grid">
+          <div class="setting" data-setting="prepare">
+            <span class="label">Prepare</span>
+            <div class="value">
+              <button class="adjust" data-direction="-1">−</button>
+              <span class="number" data-role="value">10</span>
+              <button class="adjust" data-direction="1">+</button>
+              <span class="unit">sec</span>
+            </div>
+          </div>
+          <div class="setting" data-setting="work">
+            <span class="label">Work</span>
+            <div class="value">
+              <button class="adjust" data-direction="-1">−</button>
+              <span class="number" data-role="value">20</span>
+              <button class="adjust" data-direction="1">+</button>
+              <span class="unit">sec</span>
+            </div>
+          </div>
+          <div class="setting" data-setting="rest">
+            <span class="label">Rest</span>
+            <div class="value">
+              <button class="adjust" data-direction="-1">−</button>
+              <span class="number" data-role="value">10</span>
+              <button class="adjust" data-direction="1">+</button>
+              <span class="unit">sec</span>
+            </div>
+          </div>
+          <div class="setting" data-setting="cycles">
+            <span class="label">Cycles</span>
+            <div class="value">
+              <button class="adjust" data-direction="-1">−</button>
+              <span class="number" data-role="value">8</span>
+              <button class="adjust" data-direction="1">+</button>
+              <span class="unit">×</span>
+            </div>
+          </div>
+          <div class="setting" data-setting="sets">
+            <span class="label">Tabatas</span>
+            <div class="value">
+              <button class="adjust" data-direction="-1">−</button>
+              <span class="number" data-role="value">1</span>
+              <button class="adjust" data-direction="1">+</button>
+              <span class="unit">×</span>
+            </div>
+          </div>
+          <div class="setting" data-setting="setRest">
+            <span class="label">Tabata Rest</span>
+            <div class="value">
+              <button class="adjust" data-direction="-1">−</button>
+              <span class="number" data-role="value">60</span>
+              <button class="adjust" data-direction="1">+</button>
+              <span class="unit">sec</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary">
+          <div>
+            <span class="summary-label">Total Time</span>
+            <span class="summary-value" id="totalTime">04:10</span>
+          </div>
+          <div>
+            <span class="summary-label">Total Rounds</span>
+            <span class="summary-value" id="totalRounds">8</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel timer">
+        <div class="phase" id="phase">Prepare</div>
+        <div class="time" id="time">00:10</div>
+        <div class="next" id="next">Next: Work</div>
+        <div class="progress">
+          <div class="progress-bar" id="progress"></div>
+        </div>
+        <div class="status">
+          <div>
+            <span class="status-label">Set</span>
+            <span class="status-value" id="setStatus">1 / 1</span>
+          </div>
+          <div>
+            <span class="status-label">Cycle</span>
+            <span class="status-value" id="cycleStatus">1 / 8</span>
+          </div>
+        </div>
+        <div class="controls-inline">
+          <button class="primary" id="startBtn">Start</button>
+          <button class="ghost" id="resetBtn">Reset</button>
+          <button class="ghost" id="soundBtn" aria-pressed="false">Sound On</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Works offline and fits nicely on your home screen. Stay sharp!</p>
+    </footer>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
