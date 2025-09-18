@@ -9,12 +9,12 @@ const defaults = {
 };
 
 const ranges = {
-  prepare: { min: 0, max: 600, step: 1 },
-  work: { min: 5, max: 600, step: 1 },
-  rest: { min: 0, max: 600, step: 1 },
+  prepare: { min: 0, max: 600, step: 5 },
+  work: { min: 5, max: 600, step: 5 },
+  rest: { min: 0, max: 600, step: 5 },
   cycles: { min: 1, max: 20, step: 1 },
   sets: { min: 1, max: 10, step: 1 },
-  setRest: { min: 0, max: 600, step: 1 },
+  setRest: { min: 0, max: 600, step: 5 },
 };
 
 let settings = loadSettings();
@@ -61,12 +61,12 @@ function init() {
 function loadSettings() {
   try {
     const stored = localStorage.getItem(STORE_KEY);
-    if (!stored) return { ...defaults };
+    if (!stored) return normalizeSettings({ ...defaults });
     const parsed = JSON.parse(stored);
-    return { ...defaults, ...parsed };
+    return normalizeSettings({ ...defaults, ...parsed });
   } catch (err) {
     console.warn('Failed to load settings', err);
-    return { ...defaults };
+    return normalizeSettings({ ...defaults });
   }
 }
 
@@ -160,6 +160,19 @@ function updateSetting(key, value) {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeSettings(cfg) {
+  const normalized = { ...cfg };
+  Object.keys(ranges).forEach((key) => {
+    const { min, max, step } = ranges[key];
+    const raw = Number(normalized[key]);
+    const fallback = Number(defaults[key]);
+    const clamped = clamp(Number.isFinite(raw) ? raw : fallback, min, max);
+    const adjusted = step > 1 ? clamp(Math.round(clamped / step) * step, min, max) : clamped;
+    normalized[key] = adjusted;
+  });
+  return normalized;
 }
 
 function updateSummary() {
