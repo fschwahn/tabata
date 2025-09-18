@@ -355,7 +355,7 @@ function resumeAudioContext() {
 function updateSoundButton() {
   if (!elements.soundBtn) return;
   elements.soundBtn.setAttribute('aria-pressed', state.soundEnabled);
-  elements.soundBtn.textContent = state.soundEnabled ? 'Sound Off' : 'Sound On';
+  elements.soundBtn.textContent = state.soundEnabled ? 'Sound is on' : 'Sound is off';
 }
 
 function flashPanel() {
